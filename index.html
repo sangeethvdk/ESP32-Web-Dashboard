@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 IoT Controller</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f2f2f2;
+            padding: 40px;
+        }
+
+        .dashboard {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        .device {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+
+        button {
+            padding: 12px 25px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+        }
+
+        .on {
+            background: green;
+            color: white;
+        }
+
+        .off {
+            background: red;
+            color: white;
+        }
+
+        .status {
+            margin-top: 25px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard">
+
+        <h1>ESP32 IoT Controller</h1>
+
+        <div class="device">
+            <h2>💡 LED 1</h2>
+
+            <button class="on">ON</button>
+            <button class="off">OFF</button>
+        </div>
+
+        <div class="device">
+            <h2>💡 LED 2</h2>
+
+            <button class="on">ON</button>
+            <button class="off">OFF</button>
+        </div>
+
+        <div class="status">
+            Connection: <b>Not Connected</b>
+        </div>
+
+    </div>
+
+    <!-- MQTT JavaScript Library -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <!-- Our JavaScript Code -->
+    <script src="script.js"></script>
+
+</body>
+</html>
