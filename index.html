@@ -1,92 +1,348 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ESP32 IoT Controller</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d19">
+  <title>ESP32 Smart Control</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background: #f2f2f2;
-            padding: 40px;
-        }
+  <style>
+    :root {
+      --bg: #080d19;
+      --panel: #111a2b;
+      --text: #f4f7ff;
+      --muted: #91a0b8;
+      --cyan: #55e6ff;
+      --green: #48e0a4;
+      --red: #ff6b81;
+    }
 
-        .dashboard {
-            max-width: 500px;
-            margin: auto;
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-        }
+    * { box-sizing: border-box; }
 
-        h1 {
-            margin-bottom: 30px;
-        }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 16px;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 12% 0%, #12304b, transparent 42%),
+        radial-gradient(ellipse at 100% 20%, #211b49, transparent 36%),
+        var(--bg);
+    }
 
-        .device {
-            margin: 20px 0;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-        }
+    .wrap { max-width: 880px; margin: auto; }
 
-        button {
-            padding: 12px 25px;
-            margin: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            border-radius: 8px;
-        }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
 
-        .on {
-            background: green;
-            color: white;
-        }
+    .brand { display: flex; align-items: center; gap: 13px; }
 
-        .off {
-            background: red;
-            color: white;
-        }
+    .brand-icon {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: linear-gradient(145deg, #163951, #102035);
+      border: 1px solid #29465e;
+      font-size: 27px;
+    }
 
-        .status {
-            margin-top: 25px;
-            font-size: 18px;
-        }
-    </style>
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 3px;
+    }
+
+    h1 { margin: 0; font-size: clamp(25px, 5vw, 34px); }
+
+    .connection {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 11px 14px;
+      border: 1px solid #29374d;
+      border-radius: 30px;
+      background: #101827;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #7b8799;
+    }
+
+    .connected { color: var(--green); }
+    .connected .dot { background: var(--green); }
+    .error { color: var(--red); }
+    .error .dot { background: var(--red); }
+
+    .intro {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 25px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .section-head h2 { font-size: 18px; margin: 0; }
+    .section-head span { color: var(--muted); font-size: 12px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .device {
+      padding: 23px;
+      border: 1px solid #26344b;
+      border-radius: 24px;
+      background: linear-gradient(150deg, #151f32, #0e1626);
+      box-shadow: 0 18px 45px #0004;
+      transition: .25s;
+    }
+
+    .device.is-on {
+      border-color: #347b82;
+      box-shadow: 0 0 28px #55e6ff18;
+    }
+
+    .device-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lamp {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #34435b;
+      border-radius: 18px;
+      background: #202b3d;
+      font-size: 29px;
+      filter: grayscale(.7);
+      transition: .25s;
+    }
+
+    .is-on .lamp {
+      background: #183e48;
+      border-color: var(--cyan);
+      filter: none;
+      box-shadow: 0 0 24px #55e6ff30;
+    }
+
+    .state {
+      padding: 8px 10px;
+      border-radius: 20px;
+      background: #252d3b;
+      color: #b5c0d2;
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .is-on .state {
+      color: var(--green);
+      background: #173c34;
+    }
+
+    .device h3 { margin: 20px 0 6px; font-size: 23px; }
+    .desc { color: var(--muted); font-size: 13px; margin: 0; }
+    .divider { height: 1px; background: #263248; margin: 20px 0; }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      min-height: 49px;
+      padding: 10px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    button:active { transform: scale(.97); }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+
+    .on-btn {
+      border: 1px solid transparent;
+      color: #071a18;
+      background: linear-gradient(135deg, #65f0bc, #37cda0);
+    }
+
+    .off-btn {
+      color: var(--text);
+      background: #1b2638;
+      border: 1px solid #344158;
+    }
+
+    .on-btn.selected { outline: 2px solid #a5ffdc; }
+    .off-btn.selected { border-color: #91a0b8; background: #303d52; }
+
+    .feedback {
+      min-height: 34px;
+      margin: 17px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px solid #26344b;
+      border-radius: 16px;
+      background: #0e1727;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .note strong { color: var(--text); }
+
+    footer {
+      margin-top: 25px;
+      text-align: center;
+      color: #65738a;
+      font-size: 11px;
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 20px 13px; }
+      .grid { grid-template-columns: 1fr; }
+      .device { padding: 20px; }
+    }
+  </style>
 </head>
 
 <body>
+  <main class="wrap">
 
-    <div class="dashboard">
-
-        <h1>ESP32 IoT Controller</h1>
-
-        <div class="device">
-            <h2>💡 LED 1</h2>
-
-            <button class="on">ON</button>
-            <button class="off">OFF</button>
+    <header>
+      <div class="brand">
+        <div class="brand-icon">⌁</div>
+        <div>
+          <p class="eyebrow">ESP32 • IoT SYSTEM</p>
+          <h1>Smart Control</h1>
         </div>
+      </div>
 
-        <div class="device">
-            <h2>💡 LED 2</h2>
+      <div class="connection" id="connectionBadge">
+        <span class="dot"></span>
+        <span id="connectionText">Connecting to MQTT…</span>
+      </div>
+    </header>
 
-            <button class="on">ON</button>
-            <button class="off">OFF</button>
-        </div>
+    <p class="intro">
+      Your smart space, at your fingertips. Control your two
+      connected outputs using the ESP32 MQTT controller.
+    </p>
 
-        <div class="status">
-            Connection: <b>Not Connected</b>
-        </div>
-
+    <div class="section-head">
+      <h2>Device controls</h2>
+      <span>02 outputs</span>
     </div>
 
-    <!-- MQTT JavaScript Library -->
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <section class="grid">
 
-    <!-- Our JavaScript Code -->
-    <script src="script.js"></script>
+      <article class="device" id="lightCard1">
+        <div class="device-top">
+          <div class="lamp">💡</div>
+          <span class="state" id="lightState1">LAST COMMAND: —</span>
+        </div>
 
+        <h3>Light 1</h3>
+        <p class="desc">Relay channel 1 · GPIO 4</p>
+
+        <div class="divider"></div>
+
+        <div class="controls">
+          <button class="on-btn"
+            data-device="light1" data-command="ON" disabled>
+            ⏻ Turn ON
+          </button>
+
+          <button class="off-btn"
+            data-device="light1" data-command="OFF" disabled>
+            Turn OFF
+          </button>
+        </div>
+
+        <p class="feedback" id="lightFeedback1">
+          Waiting for MQTT connection…
+        </p>
+      </article>
+
+      <article class="device" id="lightCard2">
+        <div class="device-top">
+          <div class="lamp">💡</div>
+          <span class="state" id="lightState2">LAST COMMAND: —</span>
+        </div>
+
+        <h3>Light 2</h3>
+        <p class="desc">Relay channel 2 · GPIO 5</p>
+
+        <div class="divider"></div>
+
+        <div class="controls">
+          <button class="on-btn"
+            data-device="light2" data-command="ON" disabled>
+            ⏻ Turn ON
+          </button>
+
+          <button class="off-btn"
+            data-device="light2" data-command="OFF" disabled>
+            Turn OFF
+          </button>
+        </div>
+
+        <p class="feedback" id="lightFeedback2">
+          Waiting for MQTT connection…
+        </p>
+      </article>
+
+    </section>
+
+    <aside class="note">
+      <strong>ⓘ Note:</strong>
+      The dashboard displays the last command sent. Your current ESP32
+      code does not send physical relay-state feedback to this page.
+    </aside>
+
+    <footer>ESP32 Smart Home Controller · MQTT over secure WebSockets</footer>
+
+  </main>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
