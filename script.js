@@ -1,59 +1,125 @@
-// Connect to HiveMQ using WebSocket Secure
+
 const broker = "wss://broker.hivemq.com:8884/mqtt";
 
-// MQTT topics
+// Must match your ESP32 sketch
 const lightTopic = "eee_motor_demo_7f31/light";
 const motorTopic = "eee_motor_demo_7f31/motor";
 
-// Create MQTT client
-const client = mqtt.connect(broker);
+const badge = document.getElementById("connectionBadge");
+const connectionText = document.getElementById("connectionText");
+const controls = document.querySelectorAll(
+  "button[data-device][data-command]"
+);
 
-// When connected to HiveMQ
-client.on("connect", function () {
-    console.log("Connected to HiveMQ");
+const devices = {
+  light1: {
+    topic: lightTopic,
+    card: document.getElementById("lightCard1"),
+    state: document.getElementById("lightState1"),
+    feedback: document.getElementById("lightFeedback1"),
+    label: "Light 1"
+  },
 
-    document.querySelector(".status b").textContent = "Connected";
+  light2: {
+    topic: motorTopic,
+    card: document.getElementById("lightCard2"),
+    state: document.getElementById("lightState2"),
+    feedback: document.getElementById("lightFeedback2"),
+    label: "Light 2"
+  }
+};
+
+function setConnection(status, message) {
+  badge.classList.remove("connected", "error");
+
+  if (status === "connected") {
+    badge.classList.add("connected");
+  }
+
+  if (status === "error") {
+    badge.classList.add("error");
+  }
+
+  connectionText.textContent = message;
+
+  controls.forEach(button => {
+    button.disabled = status !== "connected";
+  });
+}
+
+function showCommand(device, command) {
+  device.card.classList.toggle("is-on", command === "ON");
+  device.state.textContent = `LAST COMMAND: ${command}`;
+
+  device.feedback.textContent =
+    `${device.label}: ${command} command sent. ` +
+    "Physical state is not confirmed.";
+
+  device.card.querySelectorAll("button").forEach(button => {
+    button.classList.toggle(
+      "selected",
+      button.dataset.command === command
+    );
+  });
+}
+
+const client = mqtt.connect(broker, {
+  clean: true,
+  connectTimeout: 10000,
+  reconnectPeriod: 2000,
+  clientId:
+    "web_smart_control_" +
+    Math.random().toString(16).slice(2, 10)
 });
 
-// If connection fails
-client.on("error", function (error) {
-    console.log("MQTT Error:", error);
-
-    document.querySelector(".status b").textContent = "Connection Error";
+client.on("connect", () => {
+  console.log("Connected to HiveMQ");
+  setConnection("connected", "MQTT CONNECTED");
 });
 
-// LED 1 ON
-document.querySelectorAll(".device")[0]
-    .querySelector(".on")
-    .addEventListener("click", function () {
+client.on("reconnect", () => {
+  setConnection("connecting", "Reconnecting…");
+});
 
-        client.publish(lightTopic, "ON");
-        console.log("LED 1 → ON");
-    });
+client.on("offline", () => {
+  setConnection("connecting", "MQTT OFFLINE");
+});
 
-// LED 1 OFF
-document.querySelectorAll(".device")[0]
-    .querySelector(".off")
-    .addEventListener("click", function () {
+client.on("close", () => {
+  setConnection("connecting", "Connection closed");
+});
 
-        client.publish(lightTopic, "OFF");
-        console.log("LED 1 → OFF");
-    });
+client.on("error", error => {
+  console.error("MQTT error:", error);
+  setConnection("error", "MQTT CONNECTION ERROR");
+});
 
-// LED 2 ON
-document.querySelectorAll(".device")[1]
-    .querySelector(".on")
-    .addEventListener("click", function () {
+controls.forEach(button => {
+  button.addEventListener("click", () => {
+    const device = devices[button.dataset.device];
+    const command = button.dataset.command;
 
-        client.publish(motorTopic, "ON");
-        console.log("LED 2 → ON");
-    });
+    if (!client.connected) {
+      device.feedback.textContent =
+        "Not connected. Wait for MQTT to reconnect.";
+      return;
+    }
 
-// LED 2 OFF
-document.querySelectorAll(".device")[1]
-    .querySelector(".off")
-    .addEventListener("click", function () {
+    client.publish(
+      device.topic,
+      command,
+      { qos: 0, retain: false },
+      error => {
+        if (error) {
+          console.error("Publish failed:", error);
+          device.feedback.textContent =
+            "Could not send command. Please try again.";
+          return;
+        }
 
-        client.publish(motorTopic, "OFF");
-        console.log("LED 2 → OFF");
-    });
+        showCommand(device, command);
+        console.log(`${device.label} → ${command}`);
+      }
+    );
+  });
+});
